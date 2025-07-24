@@ -12,11 +12,11 @@ export class AutenticacionService {
   ) {}
 
   async login(datos: LoginDto) {
-    const usuario = await this.usuariosService.buscarPorCorreo(datos.correo);
-    if (!usuario || !(await bcrypt.compare(datos.contrasena, usuario.contrasena))) {
+    const usuario = await this.usuariosService.buscarPorEmail(datos.email);
+    if (!usuario || !(await bcrypt.compare(datos.password, usuario.password_hash))) {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
-    const payload = { sub: usuario.id, correo: usuario.correo };
+    const payload = { sub: usuario.usuario_id, email: usuario.email };
     const token = this.jwtService.sign(payload);
     return { token };
   }
