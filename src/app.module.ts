@@ -6,6 +6,14 @@ import { ConfigModule } from '@nestjs/config';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { AutenticacionModule } from './autenticacion/autenticacion.module';
 import { VendedoresModule } from './vendedores/vendedores.module';
+import { ZonasModule } from './zonas/zonas.module';
+import { CategoriasModule } from './categorias/categorias.module';
+import { ProductosModule } from './productos/productos.module';
+import { PedidosModule } from './pedidos/pedidos.module';
+import { PagosModule } from './pagos/pagos.module';
+import { CarritoModule } from './carrito/carrito.module';
+import { ResenasModule } from './resenas/resenas.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -19,6 +27,14 @@ import { VendedoresModule } from './vendedores/vendedores.module';
     UsuariosModule,
     AutenticacionModule,
     VendedoresModule,
+    ZonasModule,
+    CategoriasModule,
+    ProductosModule,
+    PedidosModule,
+    PagosModule,
+    CarritoModule,
+    ResenasModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

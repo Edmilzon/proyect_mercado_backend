@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../autenticacion/jwt-auth.guard';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from '../usuarios/usuario.entity';
+import { ResenasService } from '../resenas/resenas.service';
 
 @Controller('vendedores')
 export class VendedoresController {
@@ -13,6 +14,7 @@ export class VendedoresController {
     private readonly vendedoresService: VendedoresService,
     @InjectRepository(Usuario)
     private readonly usuarioRepositorio: Repository<Usuario>,
+    private readonly resenasService: ResenasService,
   ) {}
 
   @Post()
@@ -32,6 +34,12 @@ export class VendedoresController {
       })
     );
     return { vendedores: vendedoresConUsuario };
+  }
+
+  @Get(':vendedor_id/calificacion')
+  async obtenerCalificacion(@Param('vendedor_id') vendedor_id: string) {
+    const calificacion = await this.resenasService.obtenerCalificacionVendedor(vendedor_id);
+    return { calificacion };
   }
 
   @UseGuards(JwtAuthGuard)

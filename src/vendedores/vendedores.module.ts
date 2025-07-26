@@ -6,9 +6,10 @@ import { VendedoresService } from './vendedores.service';
 import { VendedoresController } from './vendedores.controller';
 import { UbicacionGateway } from './ubicacion.gateway';
 import { Usuario } from '../usuarios/usuario.entity';
+import { ResenasModule } from '../resenas/resenas.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Vendedor, UbicacionVendedor, Usuario])],
+  imports: [TypeOrmModule.forFeature([Vendedor, UbicacionVendedor, Usuario]), ResenasModule],
   providers: [VendedoresService, UbicacionGateway],
   controllers: [VendedoresController],
   exports: [VendedoresService],
