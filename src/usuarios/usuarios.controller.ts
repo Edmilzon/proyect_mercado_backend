@@ -27,6 +27,59 @@ export class UsuariosController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('perfil')
+  async obtenerPerfil(@Request() req) {
+    const usuario = await this.usuariosService.buscarPorId(req.user.usuario_id);
+    if (!usuario) {
+      throw new BadRequestException('Usuario no encontrado');
+    }
+    
+    return {
+      usuario: {
+        usuario_id: usuario.usuario_id,
+        email: usuario.email,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        numero_telefono: usuario.numero_telefono,
+        rol: usuario.rol,
+        esta_activo: usuario.esta_activo,
+        ultima_sesion_at: usuario.ultima_sesion_at,
+        creado_at: usuario.creado_at,
+        actualizado_at: usuario.actualizado_at,
+      },
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':usuario_id')
+  async obtenerUsuario(@Param('usuario_id') usuario_id: string, @Request() req) {
+    // Solo permitir si el usuario autenticado es el mismo o es admin
+    if (req.user.usuario_id !== usuario_id && req.user.rol !== 'admin' && req.user.rol !== 'super_admin') {
+      throw new BadRequestException('No autorizado para ver datos de otro usuario');
+    }
+    
+    const usuario = await this.usuariosService.buscarPorId(usuario_id);
+    if (!usuario) {
+      throw new BadRequestException('Usuario no encontrado');
+    }
+    
+    return {
+      usuario: {
+        usuario_id: usuario.usuario_id,
+        email: usuario.email,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        numero_telefono: usuario.numero_telefono,
+        rol: usuario.rol,
+        esta_activo: usuario.esta_activo,
+        ultima_sesion_at: usuario.ultima_sesion_at,
+        creado_at: usuario.creado_at,
+        actualizado_at: usuario.actualizado_at,
+      },
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(':usuario_id/direcciones')
   async crearDireccion(
     @Body() datos: CrearDireccionDto,
