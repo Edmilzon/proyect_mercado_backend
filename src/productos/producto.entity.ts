@@ -1,10 +1,12 @@
 import { Entity, PrimaryGeneratedColumn, Column, Index, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { CategoriaProducto } from '../categorias/categoria.entity';
 import { ImagenProducto } from './imagen-producto.entity';
+import { Vendedor } from '../vendedores/vendedor.entity';
 
 @Entity('productos')
 @Index(['categoria_id'])
 @Index(['nombre'])
+@Index(['vendedor_id'])
 export class Producto {
   @PrimaryGeneratedColumn('uuid')
   producto_id: string;
@@ -27,6 +29,13 @@ export class Producto {
   @ManyToOne(() => CategoriaProducto)
   @JoinColumn({ name: 'categoria_id' })
   categoria: CategoriaProducto;
+
+  @Column({ type: 'uuid' })
+  vendedor_id: string;
+
+  @ManyToOne(() => Vendedor)
+  @JoinColumn({ name: 'vendedor_id' })
+  vendedor: Vendedor;
 
   @Column({ default: 0 })
   cantidad_stock: number;

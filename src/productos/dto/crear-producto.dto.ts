@@ -23,6 +23,10 @@ export class CrearProductoDto {
   @IsUUID()
   categoria_id: string;
 
+  @IsNotEmpty()
+  @IsUUID()
+  vendedor_id: string;
+
   @IsOptional()
   @IsNumber()
   @Min(0)

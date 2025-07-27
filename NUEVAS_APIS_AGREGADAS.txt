@@ -1,0 +1,361 @@
+# 🆕 NUEVAS APIS AGREGADAS - SISTEMA COMPLETO
+# 📚 APIs adicionales que complementan el archivo apis.txt
+
+================================================================================
+🔐 SISTEMA DE VALIDACIÓN DE VENDEDORES (CRÍTICO)
+================================================================================
+
+89. POST /admin/vendedores/validar
+Descripción: Admin valida vendedor (NUEVA API CRÍTICA).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "vendedor_id": "uuid_del_vendedor",
+  "estado": "aprobado|rechazado|suspendido",
+  "motivo_rechazo": "Documentos incompletos",
+  "notas_admin": "Aprobado después de verificación",
+  "admin_id": "uuid_del_admin"
+}
+Respuesta:
+{
+  "mensaje": "Vendedor validado correctamente",
+  "vendedor": { /* datos del vendedor actualizado */ }
+}
+
+90. GET /admin/vendedores/pendientes
+Descripción: Listar vendedores pendientes de validación (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "vendedores": [/* vendedores pendientes con datos de usuario */]
+}
+
+91. GET /admin/vendedores/estadisticas
+Descripción: Estadísticas de validación de vendedores (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "estadisticas": {
+    "total_vendedores": 150,
+    "pendientes": 25,
+    "aprobados": 120,
+    "rechazados": 3,
+    "suspendidos": 2
+  }
+}
+
+================================================================================
+👤 APIS PARA COMPRADORES (NUEVAS FUNCIONALIDADES)
+================================================================================
+
+92. GET /compradores/{usuario_id}/historial-compras
+Descripción: Historial de compras con filtros (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?estado=entregado&fecha_desde=2024-01-01&fecha_hasta=2024-01-31&limit=20&offset=0
+Respuesta:
+{
+  "pedidos": [/* pedidos del comprador */],
+  "total": 45
+}
+
+93. POST /compradores/favoritos
+Descripción: Agregar producto a favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "usuario_id": "uuid_del_usuario",
+  "producto_id": "uuid_del_producto"
+}
+
+94. GET /compradores/{usuario_id}/favoritos
+Descripción: Listar productos favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "favoritos": [/* productos favoritos con detalles */]
+}
+
+95. DELETE /compradores/{usuario_id}/favoritos/{producto_id}
+Descripción: Eliminar producto de favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+96. GET /compradores/{usuario_id}/favoritos/verificar/{producto_id}
+Descripción: Verificar si producto está en favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "es_favorito": true
+}
+
+97. GET /compradores/{usuario_id}/notificaciones
+Descripción: Listar notificaciones del usuario (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?es_leida=false&tipo=pedido_nuevo&limit=20&offset=0
+Respuesta:
+{
+  "notificaciones": [/* notificaciones del usuario */],
+  "total": 15
+}
+
+98. PUT /compradores/notificaciones/{notificacion_id}/leer
+Descripción: Marcar notificación como leída (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+99. PUT /compradores/{usuario_id}/notificaciones/todas-leidas
+Descripción: Marcar todas las notificaciones como leídas (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+100. GET /compradores/{usuario_id}/notificaciones/contador
+Descripción: Contador de notificaciones no leídas (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "notificaciones_no_leidas": 7
+}
+
+101. POST /compradores/codigos-descuento/validar
+Descripción: Validar código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "codigo": "DESCUENTO10",
+  "monto_subtotal": 200.00,
+  "categoria_id": "uuid_categoria" // opcional
+}
+Respuesta:
+{
+  "valido": true,
+  "codigo_descuento": { /* datos del código */ },
+  "monto_descuento": 20.00
+}
+
+102. GET /compradores/{usuario_id}/seguimiento-pedido/{pedido_id}
+Descripción: Seguimiento detallado de pedido (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "pedido": { /* datos del pedido */ },
+  "tiempo_estimado": "15 minutos",
+  "estado_detallado": "Pedido confirmado, en preparación"
+}
+
+103. GET /compradores/{usuario_id}/estadisticas
+Descripción: Estadísticas del comprador (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "total_pedidos": 25,
+  "pedidos_entregados": 22,
+  "total_gastado": 3500.00,
+  "productos_favoritos": 8,
+  "notificaciones_no_leidas": 3
+}
+
+================================================================================
+👑 APIS PARA ADMINISTRADORES (NUEVAS FUNCIONALIDADES)
+================================================================================
+
+104. GET /admin/dashboard
+Descripción: Dashboard administrativo completo (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "dashboard": {
+    "total_usuarios": 1250,
+    "total_productos": 850,
+    "total_pedidos": 3200,
+    "total_ventas": 125000.00,
+    "pedidos_hoy": 45,
+    "ventas_hoy": 2500.00,
+    "ventas_mes": 65000.00,
+    "productos_pendientes": 12
+  }
+}
+
+105. GET /admin/usuarios
+Descripción: Listar usuarios con filtros (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?rol=vendedor&esta_activo=true&limit=20&offset=0
+Respuesta:
+{
+  "usuarios": [/* usuarios con filtros */],
+  "total": 150
+}
+
+106. PUT /admin/usuarios/{usuario_id}/estado
+Descripción: Cambiar estado de usuario (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "esta_activo": false
+}
+
+107. POST /admin/codigos-descuento
+Descripción: Crear código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "codigo": "DESCUENTO20",
+  "descripcion": "20% de descuento en electrónicos",
+  "porcentaje_descuento": 20.00,
+  "monto_minimo": 100.00,
+  "usos_maximos": 100,
+  "fecha_inicio": "2024-01-01T00:00:00Z",
+  "fecha_fin": "2024-12-31T23:59:59Z",
+  "categoria_id": "uuid_electronicos"
+}
+
+108. GET /admin/codigos-descuento
+Descripción: Listar códigos de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "codigos": [/* códigos de descuento */]
+}
+
+109. PUT /admin/codigos-descuento/{codigo_id}
+Descripción: Actualizar código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "porcentaje_descuento": 25.00,
+  "esta_activo": false
+}
+
+110. DELETE /admin/codigos-descuento/{codigo_id}
+Descripción: Eliminar código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+111. GET /admin/reportes/ventas
+Descripción: Reporte de ventas por período (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?fecha_inicio=2024-01-01&fecha_fin=2024-01-31
+Respuesta:
+{
+  "reporte": {
+    "fecha_inicio": "2024-01-01",
+    "fecha_fin": "2024-01-31",
+    "total_ventas": 45000.00,
+    "total_pedidos": 320,
+    "ventas_por_dia": [/* ventas diarias */],
+    "promedio_por_pedido": 140.63
+  }
+}
+
+112. GET /admin/reportes/productos
+Descripción: Reporte de productos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "reporte": {
+    "total_productos": 850,
+    "productos_activos": 780,
+    "productos_sin_stock": 70,
+    "productos_por_categoria": [/* productos por categoría */],
+    "productos_por_vendedor": [/* productos por vendedor */]
+  }
+}
+
+113. POST /admin/notificaciones/sistema
+Descripción: Enviar notificación del sistema (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "usuario_id": "uuid_del_usuario",
+  "titulo": "Mantenimiento programado",
+  "mensaje": "El sistema estará en mantenimiento mañana de 2:00 a 4:00 AM",
+  "url_redireccion": "https://ejemplo.com/mantenimiento"
+}
+
+================================================================================
+🏪 APIS ADICIONALES PARA VENDEDORES
+================================================================================
+
+114. GET /vendedores/{vendedor_id}/reportes/ventas
+Descripción: Reporte detallado de ventas del vendedor (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?fecha_inicio=2024-01-01&fecha_fin=2024-01-31
+Respuesta:
+{
+  "reporte": {
+    "periodo": "Enero 2024",
+    "total_ventas": 15000.00,
+    "total_pedidos": 85,
+    "productos_mas_vendidos": [/* productos */],
+    "ventas_por_dia": [/* ventas diarias */]
+  }
+}
+
+115. GET /vendedores/{vendedor_id}/inventario
+Descripción: Gestión de inventario avanzada (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "inventario": {
+    "total_productos": 25,
+    "productos_bajo_stock": 5,
+    "productos_sin_stock": 2,
+    "valor_total_inventario": 12500.00,
+    "productos": [/* productos con stock */]
+  }
+}
+
+================================================================================
+🔒 SISTEMA DE ROLES Y PERMISOS
+================================================================================
+
+Guards implementados:
+- JwtAuthGuard: Verifica token JWT
+- RolesGuard: Verifica roles de usuario
+
+Decorators disponibles:
+- @Roles('admin', 'super_admin'): Restringe acceso por roles
+- @UseGuards(JwtAuthGuard, RolesGuard): Aplica guards
+
+Ejemplo de uso:
+```typescript
+@Controller('admin')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super_admin')
+export class AdminController {
+  // Solo admins pueden acceder
+}
+```
+
+================================================================================
+📊 RESUMEN DE NUEVAS APIS AGREGADAS
+================================================================================
+
+TOTAL DE NUEVAS APIS: 27
+
+Por categoría:
+- Validación de vendedores: 3 APIs
+- Compradores: 12 APIs
+- Administradores: 10 APIs
+- Vendedores: 2 APIs
+
+APIs más importantes:
+✅ Sistema de validación de vendedores (CRÍTICO)
+✅ Dashboard administrativo completo
+✅ Sistema de favoritos para compradores
+✅ Notificaciones en tiempo real
+✅ Códigos de descuento
+✅ Historial de compras
+✅ Reportes detallados
+✅ Gestión de inventario
+
+================================================================================
+🎯 TOTAL FINAL DE APIS: 115
+================================================================================
+
+Desglose completo:
+- APIs originales: 88
+- APIs nuevas agregadas: 27
+- TOTAL: 115 APIs
+
+El sistema está 100% completo y robusto para un marketplace profesional! 🚀 

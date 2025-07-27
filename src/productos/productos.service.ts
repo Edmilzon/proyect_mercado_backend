@@ -45,7 +45,7 @@ export class ProductosService {
 
   async listarProductos(): Promise<Producto[]> {
     return this.productoRepositorio.find({
-      relations: ['categoria', 'imagenes'],
+      relations: ['categoria', 'imagenes', 'vendedor'],
       order: { creado_at: 'DESC' }
     });
   }
@@ -53,7 +53,8 @@ export class ProductosService {
   async buscarProductos(filtros: BuscarProductoDto): Promise<{ productos: Producto[], total: number }> {
     const queryBuilder = this.productoRepositorio.createQueryBuilder('producto')
       .leftJoinAndSelect('producto.categoria', 'categoria')
-      .leftJoinAndSelect('producto.imagenes', 'imagenes');
+      .leftJoinAndSelect('producto.imagenes', 'imagenes')
+      .leftJoinAndSelect('producto.vendedor', 'vendedor');
 
     if (filtros.nombre) {
       queryBuilder.andWhere('producto.nombre ILIKE :nombre', { nombre: `%${filtros.nombre}%` });

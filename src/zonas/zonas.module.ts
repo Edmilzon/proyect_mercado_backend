@@ -5,9 +5,17 @@ import { ZonasService } from './zonas.service';
 import { ZonasController } from './zonas.controller';
 import { Vendedor } from '../vendedores/vendedor.entity';
 import { DireccionUsuario } from '../usuarios/direccion.entity';
+import { Pedido } from '../pedidos/pedido.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ZonaEntrega, Vendedor, DireccionUsuario])],
+  imports: [
+    TypeOrmModule.forFeature([
+      ZonaEntrega,
+      Vendedor,
+      DireccionUsuario,
+      Pedido
+    ])
+  ],
   providers: [ZonasService],
   controllers: [ZonasController],
   exports: [ZonasService],

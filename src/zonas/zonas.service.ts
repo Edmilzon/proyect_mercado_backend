@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ZonaEntrega } from './zonas.entity';
 import { CrearZonaDto } from './dto/crear-zona.dto';
+import { CalcularTarifaDto } from './dto/calcular-tarifa.dto';
+import { AsignarZonaDto } from './dto/asignar-zona.dto';
+import { OptimizarRutaDto } from './dto/optimizar-ruta.dto';
 import { Vendedor } from '../vendedores/vendedor.entity';
 import { DireccionUsuario } from '../usuarios/direccion.entity';
+import { Pedido } from '../pedidos/pedido.entity';
 
 @Injectable()
 export class ZonasService {
@@ -15,50 +19,40 @@ export class ZonasService {
     private readonly vendedorRepositorio: Repository<Vendedor>,
     @InjectRepository(DireccionUsuario)
     private readonly direccionRepositorio: Repository<DireccionUsuario>,
+    @InjectRepository(Pedido)
+    private readonly pedidoRepositorio: Repository<Pedido>,
   ) {}
 
   async crearZona(datos: CrearZonaDto): Promise<ZonaEntrega> {
-    const existente = await this.zonaRepositorio.findOne({ where: { nombre: datos.nombre } });
-    if (existente) {
-      throw new BadRequestException('Ya existe una zona con ese nombre');
-    }
-    
-    const zona = this.zonaRepositorio.create({
-      ...datos,
-      tarifa_envio: datos.tarifa_envio ?? 0.00,
-      esta_activa: datos.esta_activa ?? true,
-    });
-    
+    const zona = this.zonaRepositorio.create(datos);
     return this.zonaRepositorio.save(zona);
   }
 
   async listarZonas(): Promise<ZonaEntrega[]> {
-    return this.zonaRepositorio.find({ order: { nombre: 'ASC' } });
-  }
-
-  async buscarPorId(zona_id: string): Promise<ZonaEntrega | undefined> {
-    const zona = await this.zonaRepositorio.findOne({ where: { zona_id } });
-    return zona ?? undefined;
-  }
-
-  async listarZonasActivas(): Promise<ZonaEntrega[]> {
-    return this.zonaRepositorio.find({ 
-      where: { esta_activa: true }, 
-      order: { nombre: 'ASC' } 
+    return this.zonaRepositorio.find({
+      order: { nombre: 'ASC' }
     });
   }
 
-  async actualizarZona(zona_id: string, datos: Partial<CrearZonaDto>): Promise<ZonaEntrega> {
-    const zona = await this.buscarPorId(zona_id);
+  async listarZonasActivas(): Promise<ZonaEntrega[]> {
+    return this.zonaRepositorio.find({
+      where: { esta_activa: true },
+      order: { nombre: 'ASC' }
+    });
+  }
+
+  async obtenerZonaPorId(zona_id: string): Promise<ZonaEntrega> {
+    const zona = await this.zonaRepositorio.findOne({ where: { zona_id } });
     if (!zona) {
       throw new NotFoundException('Zona no encontrada');
     }
+    return zona;
+  }
 
-    if (datos.nombre && datos.nombre !== zona.nombre) {
-      const existente = await this.zonaRepositorio.findOne({ where: { nombre: datos.nombre } });
-      if (existente) {
-        throw new BadRequestException('Ya existe una zona con ese nombre');
-      }
+  async actualizarZona(zona_id: string, datos: Partial<CrearZonaDto>): Promise<ZonaEntrega> {
+    const zona = await this.zonaRepositorio.findOne({ where: { zona_id } });
+    if (!zona) {
+      throw new NotFoundException('Zona no encontrada');
     }
 
     Object.assign(zona, datos);
@@ -66,95 +60,74 @@ export class ZonasService {
   }
 
   async eliminarZona(zona_id: string): Promise<void> {
-    const zona = await this.buscarPorId(zona_id);
+    const zona = await this.zonaRepositorio.findOne({ where: { zona_id } });
     if (!zona) {
       throw new NotFoundException('Zona no encontrada');
     }
 
-    // Verificar si hay vendedores asignados a esta zona
-    const vendedoresAsignados = await this.vendedorRepositorio.find({ 
-      where: { zona_asignada_id: zona_id } 
+    // Verificar que no haya vendedores asignados
+    const vendedoresAsignados = await this.vendedorRepositorio.count({
+      where: { zona_asignada_id: zona_id }
     });
-    if (vendedoresAsignados.length > 0) {
-      throw new BadRequestException('No se puede eliminar una zona que tiene vendedores asignados');
+
+    if (vendedoresAsignados > 0) {
+      throw new BadRequestException('No se puede eliminar la zona porque tiene vendedores asignados');
     }
 
     await this.zonaRepositorio.remove(zona);
   }
 
-  async calcularTarifaEnvio(
-    latitud_origen: number, 
-    longitud_origen: number, 
-    latitud_destino: number, 
-    longitud_destino: number,
-    peso_total_g: number = 0,
-    zona_id?: string
-  ): Promise<{
-    tarifa_envio: number;
-    zona_nombre?: string;
-    distancia_km: number;
-    tiempo_estimado_minutos: number;
+  async calcularTarifa(datos: CalcularTarifaDto): Promise<{
+    tarifa_base: number;
+    tarifa_adicional: number;
+    tarifa_total: number;
+    tiempo_estimado: number;
   }> {
-    // Si se proporciona zona_id, usar la tarifa de esa zona
-    if (zona_id) {
-      const zona = await this.buscarPorId(zona_id);
-      if (zona && zona.esta_activa) {
-        const distancia = this.calcularDistancia(latitud_origen, longitud_origen, latitud_destino, longitud_destino);
-        const tiempoEstimado = this.estimarTiempoEntrega(distancia);
-        
-        return {
-          tarifa_envio: zona.tarifa_envio,
-          zona_nombre: zona.nombre,
-          distancia_km: distancia,
-          tiempo_estimado_minutos: tiempoEstimado,
-        };
-      }
+    const zona = await this.zonaRepositorio.findOne({ where: { zona_id: datos.zona_id } });
+    if (!zona) {
+      throw new NotFoundException('Zona no encontrada');
     }
 
-    // Calcular distancia
-    const distancia = this.calcularDistancia(latitud_origen, longitud_origen, latitud_destino, longitud_destino);
-    
-    // Calcular tarifa basada en distancia y peso
-    let tarifaBase = 0;
-    if (distancia <= 5) {
-      tarifaBase = 10; // Envío local
-    } else if (distancia <= 15) {
-      tarifaBase = 20; // Envío cercano
-    } else if (distancia <= 30) {
-      tarifaBase = 35; // Envío medio
-    } else {
-      tarifaBase = 50; // Envío lejano
-    }
+    // Calcular distancia entre origen y destino
+    const distancia = this.calcularDistancia(
+      datos.latitud_origen,
+      datos.longitud_origen,
+      datos.latitud_destino,
+      datos.longitud_destino
+    );
 
-    // Ajustar por peso
-    const tarifaPeso = Math.max(0, (peso_total_g - 1000) / 1000) * 5; // 5 Bs por kg adicional
-    const tarifaFinal = tarifaBase + tarifaPeso;
+    // Tarifa base de la zona
+    const tarifaBase = zona.tarifa_envio;
 
-    const tiempoEstimado = this.estimarTiempoEntrega(distancia);
+    // Tarifa adicional por peso (cada 500g adicionales)
+    const pesoAdicional = Math.max(0, (datos.peso_total_g || 0) - 500);
+    const tarifaAdicional = Math.ceil(pesoAdicional / 500) * 5; // 5 Bs por cada 500g adicional
+
+    const tarifaTotal = tarifaBase + tarifaAdicional;
+
+    // Tiempo estimado (15 minutos base + 5 minutos por km)
+    const tiempoEstimado = 15 + Math.ceil(distancia) * 5;
 
     return {
-      tarifa_envio: tarifaFinal,
-      distancia_km: distancia,
-      tiempo_estimado_minutos: tiempoEstimado,
+      tarifa_base: tarifaBase,
+      tarifa_adicional: tarifaAdicional,
+      tarifa_total: tarifaTotal,
+      tiempo_estimado: tiempoEstimado
     };
   }
 
-  async asignarVendedorAZona(vendedor_id: string, zona_id: string): Promise<Vendedor> {
+  async asignarVendedorAZona(vendedor_id: string, datos: AsignarZonaDto): Promise<Vendedor> {
     const vendedor = await this.vendedorRepositorio.findOne({ where: { vendedor_id } });
     if (!vendedor) {
       throw new NotFoundException('Vendedor no encontrado');
     }
 
-    const zona = await this.buscarPorId(zona_id);
+    const zona = await this.zonaRepositorio.findOne({ where: { zona_id: datos.zona_id } });
     if (!zona) {
       throw new NotFoundException('Zona no encontrada');
     }
 
-    if (!zona.esta_activa) {
-      throw new BadRequestException('No se puede asignar a una zona inactiva');
-    }
-
-    vendedor.zona_asignada_id = zona_id;
+    vendedor.zona_asignada_id = datos.zona_id;
     return this.vendedorRepositorio.save(vendedor);
   }
 
@@ -164,147 +137,215 @@ export class ZonasService {
       throw new NotFoundException('Vendedor no encontrado');
     }
 
-    vendedor.zona_asignada_id = null as any;
+    vendedor.zona_asignada_id = null;
     return this.vendedorRepositorio.save(vendedor);
   }
 
-  async listarVendedoresPorZona(zona_id: string): Promise<Vendedor[]> {
-    const zona = await this.buscarPorId(zona_id);
-    if (!zona) {
-      throw new NotFoundException('Zona no encontrada');
-    }
-
-    return this.vendedorRepositorio.find({ 
+  async listarVendedoresEnZona(zona_id: string): Promise<Vendedor[]> {
+    return this.vendedorRepositorio.find({
       where: { zona_asignada_id: zona_id },
-      order: { calificacion_promedio: 'DESC' }
+      relations: ['usuario']
     });
   }
 
-  async encontrarZonaPorCoordenadas(latitud: number, longitud: number): Promise<ZonaEntrega | null> {
-    // Buscar zona que contenga las coordenadas
-    const zonas = await this.listarZonasActivas();
-    
-    for (const zona of zonas) {
-      if (this.coordenadasEnPoligono(latitud, longitud, zona.coordenadas_poligono)) {
-        return zona;
-      }
-    }
-    
-    return null;
-  }
+  async optimizarRutaParaVendedor(
+    vendedor_id: string,
+    pedidos_ids: string[],
+  ): Promise<any> {
+    // Obtener vendedor con ubicación actual
+    const vendedor = await this.vendedorRepositorio.findOne({
+      where: { vendedor_id },
+    });
 
-  async optimizarRuta(vendedor_id: string, pedidos_ids: string[]): Promise<{
-    ruta_optimizada: string[];
-    distancia_total: number;
-    tiempo_estimado: number;
-  }> {
-    const vendedor = await this.vendedorRepositorio.findOne({ where: { vendedor_id } });
     if (!vendedor) {
-      throw new NotFoundException('Vendedor no encontrado');
+      throw new BadRequestException('Vendedor no encontrado');
     }
 
-    // Obtener direcciones de los pedidos
-    const direcciones = await this.direccionRepositorio
-      .createQueryBuilder('direccion')
-      .where('direccion.direccion_id IN (:...pedidos_ids)', { pedidos_ids })
-      .getMany();
+    if (!vendedor.latitud_actual || !vendedor.longitud_actual) {
+      throw new BadRequestException('Vendedor no tiene ubicación actual');
+    }
+
+    // Obtener pedidos con direcciones de entrega
+    const pedidos = await this.pedidoRepositorio.find({
+      where: { pedido_id: In(pedidos_ids) },
+      relations: ['direccion_entrega'],
+    });
+
+    if (pedidos.length === 0) {
+      throw new BadRequestException('No se encontraron pedidos');
+    }
+
+    // Punto inicial (ubicación del vendedor)
+    const puntoInicial = {
+      latitud: vendedor.latitud_actual,
+      longitud: vendedor.longitud_actual,
+    };
+
+    // Puntos de entrega (direcciones de los pedidos)
+    const puntosEntrega = pedidos.map((pedido) => ({
+      pedido_id: pedido.pedido_id,
+      latitud: pedido.direccion_entrega.latitud,
+      longitud: pedido.direccion_entrega.longitud,
+      direccion: pedido.direccion_entrega.calle_avenida,
+    }));
 
     // Algoritmo simple de optimización (Nearest Neighbor)
-    const rutaOptimizada = this.algoritmoVecinoMasCercano(
-      { latitud: vendedor.latitud_actual, longitud: vendedor.longitud_actual },
-      direcciones.map(d => ({ latitud: d.latitud, longitud: d.longitud, id: d.direccion_id }))
+    const rutaOptimizada = this.calcularRutaMasCorta(
+      puntoInicial,
+      puntosEntrega,
     );
 
-    // Calcular distancia total
-    let distanciaTotal = 0;
-    let puntoActual = { latitud: vendedor.latitud_actual, longitud: vendedor.longitud_actual };
-    
-    for (const punto of rutaOptimizada) {
-      distanciaTotal += this.calcularDistancia(
-        puntoActual.latitud, puntoActual.longitud,
-        punto.latitud, punto.longitud
-      );
-      puntoActual = punto;
-    }
-
-    const tiempoEstimado = this.estimarTiempoEntrega(distanciaTotal);
-
     return {
-      ruta_optimizada: rutaOptimizada.map(p => p.id),
-      distancia_total: distanciaTotal,
-      tiempo_estimado: tiempoEstimado,
+      vendedor_id,
+      punto_inicial: puntoInicial,
+      ruta_optimizada: rutaOptimizada,
+      distancia_total: this.calcularDistanciaTotal(rutaOptimizada),
+      tiempo_estimado: this.calcularTiempoEstimado(rutaOptimizada),
     };
   }
 
-  // Métodos auxiliares privados
+  async buscarZonaPorCoordenadas(latitud: number, longitud: number): Promise<ZonaEntrega | null> {
+    const zonas = await this.zonaRepositorio.find({
+      where: { esta_activa: true }
+    });
+
+    for (const zona of zonas) {
+      if (this.puntoEnPoligono(latitud, longitud, zona.coordenadas_poligono)) {
+        return zona;
+      }
+    }
+
+    return null;
+  }
+
   private calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371; // Radio de la Tierra en km
     const dLat = this.toRadians(lat2 - lat1);
     const dLon = this.toRadians(lon2 - lon1);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
 
   private toRadians(degrees: number): number {
-    return degrees * (Math.PI/180);
+    return degrees * (Math.PI / 180);
   }
 
-  private estimarTiempoEntrega(distancia_km: number): number {
-    // Estimación basada en distancia (en minutos)
-    if (distancia_km <= 5) return 30; // 30 minutos para envíos locales
-    if (distancia_km <= 15) return 60; // 1 hora para envíos cercanos
-    if (distancia_km <= 30) return 120; // 2 horas para envíos medios
-    return 240; // 4 horas para envíos lejanos
+  private estimarTiempoEntrega(distanciaKm: number): number {
+    // 15 minutos base + 5 minutos por km
+    return 15 + Math.ceil(distanciaKm) * 5;
   }
 
-  private coordenadasEnPoligono(latitud: number, longitud: number, poligonoGeoJSON: string): boolean {
+  private puntoEnPoligono(lat: number, lon: number, poligonoGeoJSON: string): boolean {
     try {
-      // Implementación simplificada - en producción usar una librería como Turf.js
-      // Por ahora, asumimos que las coordenadas están en el formato correcto
       const poligono = JSON.parse(poligonoGeoJSON);
+      const coordenadas = poligono.coordinates[0]; // Primer anillo del polígono
       
-      // Algoritmo simple de punto en polígono (Ray Casting)
-      // Esta es una implementación básica, en producción usar una librería especializada
-      return true; // Placeholder
+      let dentro = false;
+      for (let i = 0, j = coordenadas.length - 1; i < coordenadas.length; j = i++) {
+        const xi = coordenadas[i][0];
+        const yi = coordenadas[i][1];
+        const xj = coordenadas[j][0];
+        const yj = coordenadas[j][1];
+        
+        if (((yi > lat) !== (yj > lat)) && (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+          dentro = !dentro;
+        }
+      }
+      
+      return dentro;
     } catch (error) {
-      console.error('Error al verificar coordenadas en polígono:', error);
       return false;
     }
   }
 
-  private algoritmoVecinoMasCercano(
+  private calcularRutaMasCorta(
     puntoInicial: { latitud: number; longitud: number },
-    puntos: Array<{ latitud: number; longitud: number; id: string }>
-  ): Array<{ latitud: number; longitud: number; id: string }> {
-    const ruta: Array<{ latitud: number; longitud: number; id: string }> = [];
-    const puntosRestantes = [...puntos];
+    puntosEntrega: Array<{
+      pedido_id: string;
+      latitud: number;
+      longitud: number;
+      direccion: string;
+    }>,
+  ): Array<{
+    orden: number;
+    pedido_id: string;
+    latitud: number;
+    longitud: number;
+    direccion: string;
+    distancia_desde_anterior: number;
+  }> {
+    const ruta: Array<{
+      orden: number;
+      pedido_id: string;
+      latitud: number;
+      longitud: number;
+      direccion: string;
+      distancia_desde_anterior: number;
+    }> = [];
+
     let puntoActual = puntoInicial;
+    let puntosRestantes = [...puntosEntrega];
 
-    while (puntosRestantes.length > 0) {
-      let indiceMasCercano = 0;
-      let distanciaMinima = Infinity;
+    for (let i = 0; i < puntosEntrega.length; i++) {
+      // Encontrar el punto más cercano
+      let puntoMasCercano = puntosRestantes[0];
+      let distanciaMinima = this.calcularDistancia(
+        puntoActual.latitud, puntoActual.longitud,
+        puntoMasCercano.latitud, puntoMasCercano.longitud,
+      );
 
-      for (let i = 0; i < puntosRestantes.length; i++) {
+      for (let j = 1; j < puntosRestantes.length; j++) {
         const distancia = this.calcularDistancia(
           puntoActual.latitud, puntoActual.longitud,
-          puntosRestantes[i].latitud, puntosRestantes[i].longitud
+          puntosRestantes[j].latitud, puntosRestantes[j].longitud,
         );
 
         if (distancia < distanciaMinima) {
           distanciaMinima = distancia;
-          indiceMasCercano = i;
+          puntoMasCercano = puntosRestantes[j];
         }
       }
 
-      const puntoMasCercano = puntosRestantes.splice(indiceMasCercano, 1)[0];
-      ruta.push(puntoMasCercano);
-      puntoActual = puntoMasCercano;
+      // Agregar a la ruta
+      ruta.push({
+        orden: i + 1,
+        pedido_id: puntoMasCercano.pedido_id,
+        latitud: puntoMasCercano.latitud,
+        longitud: puntoMasCercano.longitud,
+        direccion: puntoMasCercano.direccion,
+        distancia_desde_anterior: distanciaMinima,
+      });
+
+      // Actualizar punto actual y remover de puntos restantes
+      puntoActual = {
+        latitud: puntoMasCercano.latitud,
+        longitud: puntoMasCercano.longitud,
+      };
+      puntosRestantes = puntosRestantes.filter(
+        (p) => p.pedido_id !== puntoMasCercano.pedido_id,
+      );
     }
 
     return ruta;
+  }
+
+  private calcularDistanciaTotal(ruta: Array<{ distancia_desde_anterior: number }>): number {
+    let distanciaTotal = 0;
+    for (const punto of ruta) {
+      distanciaTotal += punto.distancia_desde_anterior;
+    }
+    return distanciaTotal;
+  }
+
+  private calcularTiempoEstimado(ruta: Array<{ distancia_desde_anterior: number }>): number {
+    let tiempoEstimado = 0;
+    for (const punto of ruta) {
+      tiempoEstimado += this.estimarTiempoEntrega(punto.distancia_desde_anterior);
+    }
+    return tiempoEstimado;
   }
 } 

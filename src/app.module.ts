@@ -14,6 +14,8 @@ import { PagosModule } from './pagos/pagos.module';
 import { CarritoModule } from './carrito/carrito.module';
 import { ResenasModule } from './resenas/resenas.module';
 import { ChatModule } from './chat/chat.module';
+import { AdminModule } from './admin/admin.module';
+import { CompradoresModule } from './compradores/compradores.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { ChatModule } from './chat/chat.module';
     CarritoModule,
     ResenasModule,
     ChatModule,
+    AdminModule,
+    CompradoresModule,
   ],
   controllers: [AppController],
   providers: [AppService],

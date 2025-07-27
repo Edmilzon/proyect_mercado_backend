@@ -1,0 +1,1199 @@
+# 📚 MANUAL COMPLETO DE APIs - PROYECTO MERCADO BACKEND
+# 🚀 URL Base: https://proyect-mercado-backend.fly.dev/api
+# 🔐 Autenticación: Bearer JWT Token en header Authorization
+
+================================================================================
+👑 ROLES DE USUARIO
+================================================================================
+• comprador: Usuario que compra productos
+• vendedor: Usuario que vende productos (requiere conversión)
+• admin: Administrador del sistema
+• super_admin: Super administrador con todos los permisos
+
+================================================================================
+🔐 AUTENTICACIÓN (TODOS LOS ROLES)
+================================================================================
+
+1. POST /autenticacion/login
+Descripción: Login de usuario, retorna JWT.
+Body:
+{
+  "email": "usuario@correo.com",
+  "password": "123456"
+}
+Respuesta:
+{
+  "token": "jwt_token",
+  "usuario": {
+    "usuario_id": "uuid",
+    "email": "usuario@email.com",
+    "nombre": "Juan",
+    "apellido": "Pérez",
+    "numero_telefono": "123456789",
+    "rol": "comprador",
+    "esta_activo": true,
+    "ultima_sesion_at": "2024-01-01T00:00:00Z",
+    "creado_at": "2024-01-01T00:00:00Z"
+  }
+}
+
+================================================================================
+👤 GESTIÓN DE USUARIOS (TODOS LOS ROLES)
+================================================================================
+
+2. POST /usuarios/registro
+Descripción: Registrar un nuevo usuario.
+Body:
+{
+  "email": "usuario@correo.com",
+  "password": "123456",
+  "nombre": "Juan",
+  "apellido": "Pérez",
+  "numero_telefono": "71234567",
+  "rol": "comprador" // comprador, vendedor, admin, super_admin
+}
+
+3. GET /usuarios/perfil
+Descripción: Obtener perfil del usuario autenticado.
+Headers: Authorization: Bearer jwt_token
+
+4. GET /usuarios/{usuario_id}
+Descripción: Obtener usuario por ID (solo propio o admin).
+Headers: Authorization: Bearer jwt_token
+
+5. POST /usuarios/{usuario_id}/direcciones
+Descripción: Crear dirección para usuario (solo propio o admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "etiqueta": "Casa",
+  "calle_avenida": "Av. Principal 123",
+  "ciudad": "Cochabamba",
+  "departamento": "Cochabamba",
+  "codigo_postal": "1234",
+  "pais": "Bolivia",
+  "latitud": -17.3895,
+  "longitud": -66.1568,
+  "es_predeterminada": true
+}
+
+6. GET /usuarios/{usuario_id}/direcciones
+Descripción: Listar direcciones de usuario (solo propio o admin).
+Headers: Authorization: Bearer jwt_token
+
+================================================================================
+🛒 CONVERSIÓN A VENDEDOR (NUEVA FUNCIONALIDAD)
+================================================================================
+
+7. POST /vendedores/convertir-usuario
+Descripción: Convertir usuario normal en vendedor (NUEVA API).
+Body:
+{
+  "usuario_id": "uuid_del_usuario",
+  "numero_identificacion": "12345678", // CI, NIT, etc.
+  "estado_onboarding": "pendiente", // opcional
+  "zona_asignada_id": "uuid_zona" // opcional
+}
+Respuesta:
+{
+  "mensaje": "Usuario convertido a vendedor correctamente",
+  "vendedor": { /* datos del vendedor */ },
+  "usuario": { /* datos del usuario actualizado */ }
+}
+
+================================================================================
+🏪 PANEL DEL VENDEDOR (NUEVAS APIS ESPECÍFICAS)
+================================================================================
+
+8. GET /vendedores/{vendedor_id}/dashboard
+Descripción: Obtener dashboard completo del vendedor con contadores (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "dashboard": {
+    "total_productos": 25,
+    "productos_activos": 20,
+    "productos_sin_stock": 5,
+    "total_pedidos": 150,
+    "pedidos_pendientes": 8,
+    "pedidos_confirmados": 12,
+    "pedidos_en_preparacion": 5,
+    "pedidos_en_ruta": 3,
+    "pedidos_entregados": 120,
+    "pedidos_cancelados": 2,
+    "calificacion_promedio": 4.5,
+    "total_resenas": 45,
+    "resenas_pendientes": 3,
+    "ventas_hoy": 2500.00,
+    "ventas_semana": 15000.00,
+    "ventas_mes": 65000.00,
+    "mensajes_no_leidos": 7,
+    "conversaciones_activas": 12
+  }
+}
+
+9. GET /vendedores/{vendedor_id}/productos
+Descripción: Listar productos específicos del vendedor con filtros (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?esta_activo=true&categoria_id=uuid&nombre=iphone&limit=20&offset=0
+Respuesta:
+{
+  "productos": [/* productos del vendedor */],
+  "total": 25
+}
+
+10. GET /vendedores/{vendedor_id}/pedidos
+Descripción: Listar pedidos específicos del vendedor con filtros (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?estado=pendiente&fecha_desde=2024-01-01&fecha_hasta=2024-01-31&limit=20&offset=0
+Respuesta:
+{
+  "pedidos": [/* pedidos del vendedor con detalles completos */],
+  "total": 150
+}
+
+11. GET /vendedores/pedidos/{pedido_id}/chat
+Descripción: Obtener chat específico de un pedido (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters: ?vendedor_id=uuid
+Respuesta:
+{
+  "chat": {
+    "conversacion_id": "uuid",
+    "participantes": [/* participantes */],
+    "mensajes": [/* mensajes del chat */]
+  }
+}
+
+================================================================================
+🏪 GESTIÓN DE VENDEDORES
+================================================================================
+
+12. POST /vendedores
+Descripción: Registrar datos extra de vendedor (requiere rol vendedor).
+Body:
+{
+  "vendedor_id": "uuid_del_usuario",
+  "numero_identificacion": "12345678",
+  "estado_onboarding": "pendiente",
+  "latitud_actual": -16.4897,
+  "longitud_actual": -68.1193,
+  "zona_asignada_id": "uuid_zona"
+}
+
+13. GET /vendedores
+Descripción: Listar todos los vendedores con datos de usuario.
+
+14. GET /vendedores/{vendedor_id}
+Descripción: Obtener vendedor específico por ID.
+
+15. GET /vendedores/{vendedor_id}/calificacion
+Descripción: Obtener calificación detallada de un vendedor.
+
+16. POST /vendedores/ubicaciones
+Descripción: Registrar ubicación de vendedor (requiere JWT).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "vendedor_id": "uuid_del_vendedor",
+  "latitud": -17.3895,
+  "longitud": -66.1568,
+  "precision_m": 5.0
+}
+
+17. GET /vendedores/{vendedor_id}/ubicaciones
+Descripción: Listar ubicaciones históricas de vendedor (requiere JWT).
+Headers: Authorization: Bearer jwt_token
+
+================================================================================
+📱 UBICACIÓN EN TIEMPO REAL (WebSocket)
+================================================================================
+
+URL: wss://proyect-mercado-backend.fly.dev
+
+Evento para enviar ubicación:
+{
+  "event": "ubicacion_actualizada",
+  "data": {
+    "vendedor_id": "uuid_del_vendedor",
+    "latitud": -17.3895,
+    "longitud": -66.1568,
+    "precision_m": 5.0
+  }
+}
+
+Evento recibido: Todos los clientes conectados reciben ubicacion_actualizada
+
+================================================================================
+🏷️ CATEGORÍAS DE PRODUCTOS
+================================================================================
+
+18. POST /categorias
+Descripción: Crear nueva categoría (admin/vendedor).
+Body:
+{
+  "nombre": "Electrónicos",
+  "descripcion": "Productos electrónicos y tecnología",
+  "categoria_padre_id": null
+}
+
+19. GET /categorias
+Descripción: Listar todas las categorías con jerarquía.
+
+20. GET /categorias/padres
+Descripción: Listar solo categorías padre.
+
+21. GET /categorias/{categoria_id}
+Descripción: Obtener categoría específica con subcategorías.
+
+22. PUT /categorias/{categoria_id}
+Descripción: Actualizar categoría (admin/vendedor).
+Body:
+{
+  "nombre": "Electrónicos Actualizados",
+  "descripcion": "Nueva descripción"
+}
+
+23. DELETE /categorias/{categoria_id}
+Descripción: Eliminar categoría (solo admin, sin subcategorías).
+
+================================================================================
+🛍️ PRODUCTOS (ACTUALIZADO CON VENDEDOR_ID)
+================================================================================
+
+24. POST /productos
+Descripción: Crear nuevo producto (vendedor/admin, NUEVO: requiere vendedor_id).
+Body:
+{
+  "nombre": "iPhone 15 Pro",
+  "descripcion": "El último iPhone con características avanzadas",
+  "precio_base": 1200.00,
+  "precio_actual": 1100.00,
+  "categoria_id": "uuid_categoria",
+  "vendedor_id": "uuid_del_vendedor", // NUEVO: OBLIGATORIO
+  "cantidad_stock": 50,
+  "url_imagen_principal": "https://ejemplo.com/iphone.jpg",
+  "peso_g": 187
+}
+
+25. GET /productos
+Descripción: Listar todos los productos con categoría, imágenes y vendedor.
+
+26. GET /productos/buscar
+Descripción: Búsqueda avanzada con filtros.
+Query Parameters:
+?nombre=iphone&categoria_id=uuid&vendedor_id=uuid&precio_min=1000&precio_max=1500&esta_activo=true&limit=20&offset=0
+
+27. GET /productos/{producto_id}
+Descripción: Obtener producto específico con detalles completos.
+
+28. PUT /productos/{producto_id}
+Descripción: Actualizar producto (solo vendedor propietario o admin).
+Body:
+{
+  "nombre": "iPhone 15 Pro Max",
+  "precio_actual": 1200.00,
+  "cantidad_stock": 75
+}
+
+29. DELETE /productos/{producto_id}
+Descripción: Eliminar producto (solo vendedor propietario o admin).
+
+30. PUT /productos/{producto_id}/stock
+Descripción: Actualizar stock (solo vendedor propietario o admin).
+Body:
+{
+  "cantidad": 10
+}
+
+================================================================================
+🖼️ GESTIÓN DE IMÁGENES DE PRODUCTOS
+================================================================================
+
+31. POST /productos/{producto_id}/imagenes
+Descripción: Agregar imagen a producto (solo vendedor propietario o admin).
+Body:
+{
+  "url_imagen": "https://ejemplo.com/imagen1.jpg",
+  "orden_indice": 1
+}
+
+32. GET /productos/{producto_id}/imagenes
+Descripción: Listar imágenes de un producto.
+
+33. DELETE /productos/imagenes/{imagen_id}
+Descripción: Eliminar imagen (solo vendedor propietario o admin).
+
+================================================================================
+🛒 CARRITO DE COMPRAS
+================================================================================
+
+34. POST /carrito/calcular
+Descripción: Calcular totales del carrito.
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "items": [
+    {
+      "producto_id": "uuid_del_producto",
+      "cantidad": 2
+    }
+  ]
+}
+
+35. POST /carrito/validar-stock
+Descripción: Validar disponibilidad de stock.
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "items": [
+    {
+      "producto_id": "uuid_del_producto",
+      "cantidad": 2
+    }
+  ]
+}
+
+36. GET /carrito/calcular-envio?subtotal=200&zona_id=uuid
+Descripción: Calcular costo de envío.
+Headers: Authorization: Bearer jwt_token
+
+37. GET /carrito/calcular-descuentos?subtotal=200&codigo_descuento=DESCUENTO10
+Descripción: Calcular descuentos aplicables.
+Headers: Authorization: Bearer jwt_token
+
+38. POST /carrito/resumen-completo
+Descripción: Resumen completo del carrito con envío y descuentos.
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "items": [
+    {
+      "producto_id": "uuid_del_producto",
+      "cantidad": 2
+    }
+  ],
+  "zona_id": "uuid_de_la_zona",
+  "codigo_descuento": "DESCUENTO10"
+}
+
+================================================================================
+📦 PEDIDOS
+================================================================================
+
+39. POST /pedidos
+Descripción: Crear nuevo pedido (comprador).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "comprador_id": "uuid_del_comprador",
+  "vendedor_id": "uuid_del_vendedor",
+  "direccion_entrega_id": "uuid_de_la_direccion",
+  "costo_envio": 15.50,
+  "monto_descuento": 10.00,
+  "notas_comprador": "Entregar en la puerta principal",
+  "whatsapp_pedido_id": "wa_123456",
+  "items": [
+    {
+      "producto_id": "uuid_del_producto",
+      "cantidad": 2
+    }
+  ]
+}
+
+40. GET /pedidos
+Descripción: Listar todos los pedidos (solo admin).
+
+41. GET /pedidos/mis-pedidos
+Descripción: Listar pedidos del usuario autenticado (comprador).
+Headers: Authorization: Bearer jwt_token
+
+42. GET /pedidos/vendedor/{vendedor_id}
+Descripción: Listar pedidos de un vendedor específico (solo vendedor propietario o admin).
+Headers: Authorization: Bearer jwt_token
+
+43. GET /pedidos/{pedido_id}
+Descripción: Obtener pedido específico con detalles completos.
+Headers: Authorization: Bearer jwt_token
+
+44. PUT /pedidos/{pedido_id}/estado
+Descripción: Cambiar estado del pedido (solo vendedor o admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "estado": "confirmado",
+  "notas_vendedor": "Pedido confirmado, en preparación",
+  "hora_estimada_entrega": "2024-01-01T18:00:00Z"
+}
+Estados válidos: pendiente, confirmado, en_preparacion, en_ruta, entregado, cancelado, reembolsado
+
+45. DELETE /pedidos/{pedido_id}
+Descripción: Eliminar pedido (solo pendientes, comprador o admin).
+Headers: Authorization: Bearer jwt_token
+
+================================================================================
+💳 PAGOS
+================================================================================
+
+46. POST /pagos
+Descripción: Registrar pago para pedido (admin/sistema).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "pedido_id": "uuid_del_pedido",
+  "transaccion_id": "txn_123456789",
+  "monto": 205.50,
+  "moneda": "BOB",
+  "metodo_pago": "codigo_qr",
+  "estado": "completado",
+  "procesado_por": "Sistema Automático",
+  "notas": "Pago procesado exitosamente"
+}
+Métodos válidos: codigo_qr, transferencia_bancaria, efectivo_contra_entrega, tarjeta, billetera_movil
+
+47. GET /pagos
+Descripción: Listar todos los pagos (admin).
+
+48. GET /pagos/{pago_id}
+Descripción: Obtener pago específico (admin).
+
+49. GET /pagos/pedido/{pedido_id}
+Descripción: Obtener pago de pedido específico.
+
+50. PUT /pagos/{pago_id}/estado
+Descripción: Actualizar estado del pago (admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "estado": "completado"
+}
+
+51. GET /pagos/estado/{estado}
+Descripción: Listar pagos por estado (admin).
+
+52. GET /pagos/metodo/{metodo_pago}
+Descripción: Listar pagos por método (admin).
+
+================================================================================
+⭐ RESEÑAS Y CALIFICACIONES
+================================================================================
+
+53. POST /resenas
+Descripción: Crear reseña (solo comprador del pedido).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "pedido_id": "uuid_del_pedido",
+  "comprador_id": "uuid_del_comprador",
+  "vendedor_id": "uuid_del_vendedor",
+  "calificacion": 5,
+  "comentario": "Excelente servicio y productos de calidad"
+}
+
+54. GET /resenas
+Descripción: Listar todas las reseñas.
+
+55. GET /resenas/buscar
+Descripción: Buscar reseñas con filtros.
+Query Params: vendedor_id, comprador_id, calificacion, limit, offset
+
+56. GET /resenas/vendedor/{vendedor_id}
+Descripción: Listar reseñas de vendedor específico.
+
+57. GET /resenas/comprador/{comprador_id}
+Descripción: Listar reseñas de comprador (solo propio o admin).
+
+58. GET /resenas/pendientes/{comprador_id}
+Descripción: Listar pedidos entregados sin reseña (solo propio o admin).
+
+59. GET /resenas/{resena_id}
+Descripción: Obtener reseña por ID.
+
+60. PUT /resenas/{resena_id}/responder
+Descripción: Responder reseña (solo vendedor o admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "respuesta_vendedor": "Gracias por tu comentario, nos esforzamos por dar el mejor servicio"
+}
+
+61. PUT /resenas/{resena_id}
+Descripción: Actualizar reseña (solo comprador o admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "calificacion": 4,
+  "comentario": "Muy buen servicio, actualizado mi comentario"
+}
+
+62. DELETE /resenas/{resena_id}
+Descripción: Eliminar reseña (solo comprador o admin).
+Headers: Authorization: Bearer jwt_token
+
+================================================================================
+💬 CHAT EN TIEMPO REAL
+================================================================================
+
+63. POST /conversaciones
+Descripción: Crear conversación (requiere JWT).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "pedido_id": "uuid_del_pedido",
+  "tipo_conversacion": "directa",
+  "participantes": ["uuid_usuario1", "uuid_usuario2"]
+}
+
+64. GET /conversaciones
+Descripción: Listar conversaciones del usuario autenticado.
+Headers: Authorization: Bearer jwt_token
+
+65. GET /conversaciones/buscar
+Descripción: Buscar conversaciones con filtros.
+Headers: Authorization: Bearer jwt_token
+Query Params: pedido_id, tipo_conversacion, estado, limit, offset
+
+66. GET /conversaciones/usuario/{usuario_id}
+Descripción: Listar conversaciones de usuario (solo propio o admin).
+Headers: Authorization: Bearer jwt_token
+
+67. GET /conversaciones/{conversacion_id}
+Descripción: Obtener conversación por ID.
+Headers: Authorization: Bearer jwt_token
+
+68. PUT /conversaciones/{conversacion_id}/estado
+Descripción: Cambiar estado de conversación.
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "estado": "archivada"
+}
+
+69. POST /conversaciones/{conversacion_id}/participantes
+Descripción: Agregar participante a conversación.
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "usuario_id": "uuid_del_usuario"
+}
+
+70. DELETE /conversaciones/{conversacion_id}/participantes/{usuario_id}
+Descripción: Remover participante de conversación.
+Headers: Authorization: Bearer jwt_token
+
+71. POST /mensajes
+Descripción: Crear mensaje.
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "conversacion_id": "uuid_de_la_conversacion",
+  "contenido": "Hola, ¿cómo estás?",
+  "tipo_mensaje": "texto",
+  "url_archivo": "https://ejemplo.com/imagen.jpg"
+}
+
+72. GET /mensajes/conversacion/{conversacion_id}
+Descripción: Listar mensajes de conversación.
+Headers: Authorization: Bearer jwt_token
+
+73. GET /mensajes/{mensaje_id}
+Descripción: Obtener mensaje por ID.
+Headers: Authorization: Bearer jwt_token
+
+74. PUT /mensajes/conversacion/{conversacion_id}/leer
+Descripción: Marcar mensajes como leídos.
+Headers: Authorization: Bearer jwt_token
+
+75. GET /mensajes/usuario/{usuario_id}/no-leidos
+Descripción: Obtener mensajes no leídos (solo propio o admin).
+Headers: Authorization: Bearer jwt_token
+
+76. DELETE /mensajes/{mensaje_id}
+Descripción: Eliminar mensaje (solo remitente).
+Headers: Authorization: Bearer jwt_token
+
+================================================================================
+🚚 ZONAS DE ENTREGA
+================================================================================
+
+77. POST /zonas
+Descripción: Crear zona de entrega (admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "nombre": "Zona Centro",
+  "descripcion": "Zona del centro de la ciudad",
+  "coordenadas_poligono": "{\"type\":\"Polygon\",\"coordinates\":[[[...]]]}",
+  "tarifa_envio": 15.00,
+  "esta_activa": true
+}
+
+78. GET /zonas
+Descripción: Listar todas las zonas de entrega.
+
+79. GET /zonas/activas
+Descripción: Listar solo zonas activas.
+
+80. GET /zonas/{zona_id}
+Descripción: Obtener zona por ID.
+
+81. PUT /zonas/{zona_id}
+Descripción: Actualizar zona de entrega (admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "nombre": "Zona Centro Actualizada",
+  "tarifa_envio": 20.00
+}
+
+82. DELETE /zonas/{zona_id}
+Descripción: Eliminar zona de entrega (admin).
+Headers: Authorization: Bearer jwt_token
+
+83. POST /zonas/calcular-tarifa
+Descripción: Calcular tarifa de envío automáticamente.
+Body:
+{
+  "latitud_origen": -16.4897,
+  "longitud_origen": -68.1193,
+  "latitud_destino": -16.5000,
+  "longitud_destino": -68.1300,
+  "peso_total_g": 1500,
+  "zona_id": "uuid_de_la_zona"
+}
+
+84. POST /zonas/vendedores/{vendedor_id}/asignar-zona
+Descripción: Asignar vendedor a zona (admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "zona_id": "uuid_de_la_zona"
+}
+
+85. DELETE /zonas/vendedores/{vendedor_id}/asignar-zona
+Descripción: Remover vendedor de zona (admin).
+Headers: Authorization: Bearer jwt_token
+
+86. GET /zonas/{zona_id}/vendedores
+Descripción: Listar vendedores asignados a zona.
+
+87. POST /zonas/vendedores/{vendedor_id}/optimizar-ruta
+Descripción: Optimizar ruta para vendedor (admin).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "pedidos_ids": ["uuid_pedido1", "uuid_pedido2", "uuid_pedido3"]
+}
+
+88. GET /zonas/buscar-por-coordenadas
+Descripción: Encontrar zona por coordenadas.
+Query Params: latitud, longitud
+
+================================================================================
+🔌 WEBSOCKET EVENTS - CHAT Y UBICACIÓN
+================================================================================
+
+Conexión:
+const socket = io('https://proyect-mercado-backend.fly.dev', {
+  auth: {
+    token: 'jwt_token',
+    usuario_id: 'uuid_del_usuario'
+  }
+});
+# 🆕 NUEVAS APIS AGREGADAS - SISTEMA COMPLETO
+# 📚 APIs adicionales que complementan el archivo apis.txt
+
+================================================================================
+🔐 SISTEMA DE VALIDACIÓN DE VENDEDORES (CRÍTICO)
+================================================================================
+
+89. POST /admin/vendedores/validar
+Descripción: Admin valida vendedor (NUEVA API CRÍTICA).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "vendedor_id": "uuid_del_vendedor",
+  "estado": "aprobado|rechazado|suspendido",
+  "motivo_rechazo": "Documentos incompletos",
+  "notas_admin": "Aprobado después de verificación",
+  "admin_id": "uuid_del_admin"
+}
+Respuesta:
+{
+  "mensaje": "Vendedor validado correctamente",
+  "vendedor": { /* datos del vendedor actualizado */ }
+}
+
+90. GET /admin/vendedores/pendientes
+Descripción: Listar vendedores pendientes de validación (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "vendedores": [/* vendedores pendientes con datos de usuario */]
+}
+
+91. GET /admin/vendedores/estadisticas
+Descripción: Estadísticas de validación de vendedores (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "estadisticas": {
+    "total_vendedores": 150,
+    "pendientes": 25,
+    "aprobados": 120,
+    "rechazados": 3,
+    "suspendidos": 2
+  }
+}
+
+================================================================================
+👤 APIS PARA COMPRADORES (NUEVAS FUNCIONALIDADES)
+================================================================================
+
+92. GET /compradores/{usuario_id}/historial-compras
+Descripción: Historial de compras con filtros (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?estado=entregado&fecha_desde=2024-01-01&fecha_hasta=2024-01-31&limit=20&offset=0
+Respuesta:
+{
+  "pedidos": [/* pedidos del comprador */],
+  "total": 45
+}
+
+93. POST /compradores/favoritos
+Descripción: Agregar producto a favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "usuario_id": "uuid_del_usuario",
+  "producto_id": "uuid_del_producto"
+}
+
+94. GET /compradores/{usuario_id}/favoritos
+Descripción: Listar productos favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "favoritos": [/* productos favoritos con detalles */]
+}
+
+95. DELETE /compradores/{usuario_id}/favoritos/{producto_id}
+Descripción: Eliminar producto de favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+96. GET /compradores/{usuario_id}/favoritos/verificar/{producto_id}
+Descripción: Verificar si producto está en favoritos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "es_favorito": true
+}
+
+97. GET /compradores/{usuario_id}/notificaciones
+Descripción: Listar notificaciones del usuario (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?es_leida=false&tipo=pedido_nuevo&limit=20&offset=0
+Respuesta:
+{
+  "notificaciones": [/* notificaciones del usuario */],
+  "total": 15
+}
+
+98. PUT /compradores/notificaciones/{notificacion_id}/leer
+Descripción: Marcar notificación como leída (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+99. PUT /compradores/{usuario_id}/notificaciones/todas-leidas
+Descripción: Marcar todas las notificaciones como leídas (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+100. GET /compradores/{usuario_id}/notificaciones/contador
+Descripción: Contador de notificaciones no leídas (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "notificaciones_no_leidas": 7
+}
+
+101. POST /compradores/codigos-descuento/validar
+Descripción: Validar código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "codigo": "DESCUENTO10",
+  "monto_subtotal": 200.00,
+  "categoria_id": "uuid_categoria" // opcional
+}
+Respuesta:
+{
+  "valido": true,
+  "codigo_descuento": { /* datos del código */ },
+  "monto_descuento": 20.00
+}
+
+102. GET /compradores/{usuario_id}/seguimiento-pedido/{pedido_id}
+Descripción: Seguimiento detallado de pedido (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "pedido": { /* datos del pedido */ },
+  "tiempo_estimado": "15 minutos",
+  "estado_detallado": "Pedido confirmado, en preparación"
+}
+
+103. GET /compradores/{usuario_id}/estadisticas
+Descripción: Estadísticas del comprador (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "total_pedidos": 25,
+  "pedidos_entregados": 22,
+  "total_gastado": 3500.00,
+  "productos_favoritos": 8,
+  "notificaciones_no_leidas": 3
+}
+
+================================================================================
+👑 APIS PARA ADMINISTRADORES (NUEVAS FUNCIONALIDADES)
+================================================================================
+
+104. GET /admin/dashboard
+Descripción: Dashboard administrativo completo (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "dashboard": {
+    "total_usuarios": 1250,
+    "total_productos": 850,
+    "total_pedidos": 3200,
+    "total_ventas": 125000.00,
+    "pedidos_hoy": 45,
+    "ventas_hoy": 2500.00,
+    "ventas_mes": 65000.00,
+    "productos_pendientes": 12
+  }
+}
+
+105. GET /admin/usuarios
+Descripción: Listar usuarios con filtros (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?rol=vendedor&esta_activo=true&limit=20&offset=0
+Respuesta:
+{
+  "usuarios": [/* usuarios con filtros */],
+  "total": 150
+}
+
+106. PUT /admin/usuarios/{usuario_id}/estado
+Descripción: Cambiar estado de usuario (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "esta_activo": false
+}
+
+107. POST /admin/codigos-descuento
+Descripción: Crear código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "codigo": "DESCUENTO20",
+  "descripcion": "20% de descuento en electrónicos",
+  "porcentaje_descuento": 20.00,
+  "monto_minimo": 100.00,
+  "usos_maximos": 100,
+  "fecha_inicio": "2024-01-01T00:00:00Z",
+  "fecha_fin": "2024-12-31T23:59:59Z",
+  "categoria_id": "uuid_electronicos"
+}
+
+108. GET /admin/codigos-descuento
+Descripción: Listar códigos de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "codigos": [/* códigos de descuento */]
+}
+
+109. PUT /admin/codigos-descuento/{codigo_id}
+Descripción: Actualizar código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "porcentaje_descuento": 25.00,
+  "esta_activo": false
+}
+
+110. DELETE /admin/codigos-descuento/{codigo_id}
+Descripción: Eliminar código de descuento (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+
+111. GET /admin/reportes/ventas
+Descripción: Reporte de ventas por período (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?fecha_inicio=2024-01-01&fecha_fin=2024-01-31
+Respuesta:
+{
+  "reporte": {
+    "fecha_inicio": "2024-01-01",
+    "fecha_fin": "2024-01-31",
+    "total_ventas": 45000.00,
+    "total_pedidos": 320,
+    "ventas_por_dia": [/* ventas diarias */],
+    "promedio_por_pedido": 140.63
+  }
+}
+
+112. GET /admin/reportes/productos
+Descripción: Reporte de productos (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "reporte": {
+    "total_productos": 850,
+    "productos_activos": 780,
+    "productos_sin_stock": 70,
+    "productos_por_categoria": [/* productos por categoría */],
+    "productos_por_vendedor": [/* productos por vendedor */]
+  }
+}
+
+113. POST /admin/notificaciones/sistema
+Descripción: Enviar notificación del sistema (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Body:
+{
+  "usuario_id": "uuid_del_usuario",
+  "titulo": "Mantenimiento programado",
+  "mensaje": "El sistema estará en mantenimiento mañana de 2:00 a 4:00 AM",
+  "url_redireccion": "https://ejemplo.com/mantenimiento"
+}
+
+================================================================================
+🏪 APIS ADICIONALES PARA VENDEDORES
+================================================================================
+
+114. GET /vendedores/{vendedor_id}/reportes/ventas
+Descripción: Reporte detallado de ventas del vendedor (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Query Parameters:
+?fecha_inicio=2024-01-01&fecha_fin=2024-01-31
+Respuesta:
+{
+  "reporte": {
+    "periodo": "Enero 2024",
+    "total_ventas": 15000.00,
+    "total_pedidos": 85,
+    "productos_mas_vendidos": [/* productos */],
+    "ventas_por_dia": [/* ventas diarias */]
+  }
+}
+
+115. GET /vendedores/{vendedor_id}/inventario
+Descripción: Gestión de inventario avanzada (NUEVA API).
+Headers: Authorization: Bearer jwt_token
+Respuesta:
+{
+  "inventario": {
+    "total_productos": 25,
+    "productos_bajo_stock": 5,
+    "productos_sin_stock": 2,
+    "valor_total_inventario": 12500.00,
+    "productos": [/* productos con stock */]
+  }
+}
+
+================================================================================
+🔒 SISTEMA DE ROLES Y PERMISOS
+================================================================================
+
+Guards implementados:
+- JwtAuthGuard: Verifica token JWT
+- RolesGuard: Verifica roles de usuario
+
+Decorators disponibles:
+- @Roles('admin', 'super_admin'): Restringe acceso por roles
+- @UseGuards(JwtAuthGuard, RolesGuard): Aplica guards
+
+Ejemplo de uso:
+```typescript
+@Controller('admin')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super_admin')
+export class AdminController {
+  // Solo admins pueden acceder
+}
+```
+
+================================================================================
+📊 RESUMEN DE NUEVAS APIS AGREGADAS
+================================================================================
+
+TOTAL DE NUEVAS APIS: 27
+
+Por categoría:
+- Validación de vendedores: 3 APIs
+- Compradores: 12 APIs
+- Administradores: 10 APIs
+- Vendedores: 2 APIs
+
+APIs más importantes:
+✅ Sistema de validación de vendedores (CRÍTICO)
+✅ Dashboard administrativo completo
+✅ Sistema de favoritos para compradores
+✅ Notificaciones en tiempo real
+✅ Códigos de descuento
+✅ Historial de compras
+✅ Reportes detallados
+✅ Gestión de inventario
+
+================================================================================
+🎯 TOTAL FINAL DE APIS: 115
+================================================================================
+
+Desglose completo:
+- APIs originales: 88
+- APIs nuevas agregadas: 27
+- TOTAL: 115 APIs
+
+El sistema está 100% completo y robusto para un marketplace profesional! 🚀 
+
+Eventos de Chat:
+- unirse_conversacion: Unirse a conversación
+- salir_conversacion: Salir de conversación
+- enviar_mensaje: Enviar mensaje
+- marcar_leido: Marcar mensajes como leídos
+- escribiendo: Indicar que está escribiendo
+
+Eventos de Ubicación:
+- ubicacion_actualizada: Actualizar ubicación de vendedor
+
+================================================================================
+📋 FLUJO COMPLETO DEL VENDEDOR
+================================================================================
+
+🏪 **PASO 1: LOGIN Y ACCESO**
+1. POST /autenticacion/login (con credenciales de vendedor)
+2. GET /usuarios/perfil (verificar rol vendedor)
+
+🏪 **PASO 2: DASHBOARD PRINCIPAL**
+3. GET /vendedores/{vendedor_id}/dashboard
+   - Contadores de productos
+   - Contadores de pedidos por estado
+   - Calificación promedio
+   - Ventas por período
+   - Mensajes no leídos
+
+🏪 **PASO 3: GESTIÓN DE PRODUCTOS**
+4. GET /vendedores/{vendedor_id}/productos (listar mis productos)
+5. POST /productos (agregar nuevo producto)
+6. PUT /productos/{producto_id} (editar producto)
+7. DELETE /productos/{producto_id} (eliminar producto)
+8. PUT /productos/{producto_id}/stock (actualizar stock)
+
+🏪 **PASO 4: GESTIÓN DE PEDIDOS**
+9. GET /vendedores/{vendedor_id}/pedidos (ver todos mis pedidos)
+10. GET /vendedores/{vendedor_id}/pedidos?estado=pendiente (pedidos pendientes)
+11. GET /pedidos/{pedido_id} (ver detalles del pedido)
+12. PUT /pedidos/{pedido_id}/estado (cambiar estado del pedido)
+
+🏪 **PASO 5: COMUNICACIÓN CON CLIENTES**
+13. GET /vendedores/pedidos/{pedido_id}/chat (chat del pedido)
+14. POST /mensajes (responder mensajes)
+15. PUT /mensajes/conversacion/{conversacion_id}/leer (marcar como leído)
+
+🏪 **PASO 6: GESTIÓN DE RESEÑAS**
+16. GET /resenas/vendedor/{vendedor_id} (ver reseñas de mi negocio)
+17. PUT /resenas/{resena_id}/responder (responder reseñas)
+
+🏪 **PASO 7: UBICACIÓN EN TIEMPO REAL**
+18. POST /vendedores/ubicaciones (actualizar ubicación)
+19. WebSocket: ubicacion_actualizada (ubicación en tiempo real)
+
+================================================================================
+📋 RESUMEN POR ROLES
+================================================================================
+
+👤 COMPRADOR:
+- Registro y login
+- Gestión de perfil y direcciones
+- Explorar productos y categorías
+- Carrito de compras
+- Realizar pedidos
+- Ver estado de pedidos
+- Crear reseñas
+- Chat con vendedores
+
+🏪 VENDEDOR:
+- Todo lo del comprador +
+- Conversión a vendedor
+- Dashboard con contadores
+- Gestión de productos propios
+- Gestión de pedidos recibidos
+- Actualizar ubicación en tiempo real
+- Responder reseñas
+- Chat con compradores
+- Estadísticas de ventas
+
+👑 ADMIN:
+- Todo lo anterior +
+- Gestión completa de usuarios
+- Gestión de categorías
+- Gestión de zonas de entrega
+- Asignar vendedores a zonas
+- Ver todos los pedidos y pagos
+- Optimización de rutas
+- Gestión de reseñas
+
+🦸 SUPER_ADMIN:
+- Todo lo anterior +
+- Gestión de otros admins
+- Configuraciones del sistema
+- Logs y auditoría
+
+================================================================================
+🚀 DESPLIEGUE Y CONFIGURACIÓN
+================================================================================
+
+URL de Producción: https://proyect-mercado-backend.fly.dev
+URL de WebSocket: wss://proyect-mercado-backend.fly.dev
+
+Headers requeridos para APIs protegidas:
+Authorization: Bearer jwt_token
+Content-Type: application/json
+
+CORS configurado para:
+- http://localhost:3000 (desarrollo)
+- https://tienda-proyect.netlify.app (producción)
+- https://*.netlify.app
+- https://*.vercel.app
+
+================================================================================
+✅ ESTADO DEL PROYECTO: COMPLETADO
+================================================================================
+
+Todas las funcionalidades implementadas:
+✅ Usuarios y autenticación
+✅ Conversión a vendedor
+✅ Panel completo del vendedor con dashboard
+✅ Productos con relación a vendedores
+✅ Categorías jerárquicas
+✅ Pedidos y pagos
+✅ Carrito de compras
+✅ Reseñas y calificaciones
+✅ Chat en tiempo real
+✅ Zonas de entrega
+✅ Ubicación GPS en tiempo real
+✅ CORS configurado
+✅ Desplegado en Fly.io
+
+================================================================================
+🎯 APIS ESPECÍFICAS PARA EL PANEL DEL VENDEDOR: 88 TOTAL
+================================================================================
+
