@@ -11,9 +11,11 @@ async function bootstrap() {
       'http://localhost:3001',           // Puerto alternativo
       'http://127.0.0.1:3000',          // IP local
       'http://127.0.0.1:3001',          // IP local alternativo
-      'https://tu-dominio-frontend.com', // Tu dominio de producción (cambiar)
+      'https://tienda-proyect.netlify.app', // Tu dominio específico de Netlify
+      'https://*.netlify.app',          // Otros dominios de Netlify
       'https://*.vercel.app',           // Vercel deployments
-      'https://*.netlify.app',          // Netlify deployments
+      // Para desarrollo, puedes descomentar la siguiente línea para permitir todos los orígenes
+      // '*',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -35,6 +37,6 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 5000);
   
   console.log(`🚀 Servidor corriendo en puerto ${process.env.PORT ?? 5000}`);
-  console.log(`🌐 CORS habilitado para desarrollo local`);
+  console.log(`🌐 CORS habilitado para desarrollo local y Netlify`);
 }
 bootstrap();
